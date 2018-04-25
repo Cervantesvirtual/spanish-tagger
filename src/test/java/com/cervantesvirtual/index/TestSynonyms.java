@@ -10,6 +10,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermAutomatonQuery;
 import org.apache.lucene.search.TokenStreamToTermAutomatonQuery;
@@ -63,7 +64,7 @@ public class TestSynonyms {
 
 		TokenStreamToTermAutomatonQuery q = new TokenStreamToTermAutomatonQuery();
 		TermAutomatonQuery autQuery = q.toQuery("contents",
-				analyzer.tokenStream("contents", "pos#noun pos#adjective"));
+				analyzer.tokenStream("contents", "pos#verb"));
 
 		System.out.println("aut:" + autQuery);
 
@@ -87,6 +88,9 @@ public class TestSynonyms {
 			}
 			System.out.println("-------------");
 		}
+		
+		Term term = new Term("contents", "pos#verb");
+		SearchFiles.getBasicStats(reader, term, 0);
 
 		reader.close();
 	}
