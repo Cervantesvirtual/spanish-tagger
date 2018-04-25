@@ -1,6 +1,5 @@
 package com.cervantesvirtual.index;
 
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -26,10 +25,10 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.highlight.Formatter;
 import org.apache.lucene.search.highlight.Fragmenter;
 import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import org.apache.lucene.search.highlight.QueryScorer;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
-import org.apache.lucene.search.highlight.TextFragment;
 import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.search.similarities.BasicStats;
 import org.apache.lucene.store.FSDirectory;
@@ -53,7 +52,7 @@ public class SearchFiles {
     String field = "contents";
     String queries = null;
     int repeat = 0;
-    boolean raw = false;
+    //boolean raw = false;
     String queryString = null;
     int hitsPerPage = 10;
     
@@ -73,8 +72,8 @@ public class SearchFiles {
       } else if ("-repeat".equals(args[i])) {
         repeat = Integer.parseInt(args[i+1]);
         i++;
-      } else if ("-raw".equals(args[i])) {
-        raw = true;
+      /*} else if ("-raw".equals(args[i])) {
+        raw = true;*/
       } else if ("-paging".equals(args[i])) {
         hitsPerPage = Integer.parseInt(args[i+1]);
         if (hitsPerPage <= 0) {
@@ -134,68 +133,14 @@ public class SearchFiles {
       Term term = new Term("contents", line);
       SearchFiles.getBasicStats(reader, term, 0);
       
-      
-      /** Highlighter Code Start ****/
-      
-      //Uses HTML &lt;B&gt;&lt;/B&gt; tag to highlight the searched terms
-      Formatter formatter = new SimpleHTMLFormatter();
-       
-      //It scores text fragments by the number of unique query terms found
-      //Basically the matching score in layman terms
-      QueryScorer scorer = new QueryScorer(query);
-       
-      //used to markup highlighted terms found in the best sections of a text
-      Highlighter highlighter = new Highlighter(formatter, scorer);
-       
-      //It breaks text up into same-size texts but does not split up spans
-      Fragmenter fragmenter = new SimpleSpanFragmenter(scorer, 10);
-       
-      //breaks text up into same-size fragments with no concerns over spotting sentence boundaries.
-      //Fragmenter fragmenter = new SimpleFragmenter(10);
-       
-      //set fragmenter to highlighter
-      highlighter.setTextFragmenter(fragmenter);
-       
-      //Iterate over found results
-      for (int i = 0; i < hits.scoreDocs.length; i++)
-      {
-          int docid = hits.scoreDocs[i].doc;
-          Document doc = searcher.doc(docid);
-          String title = doc.get("path");
-           
-          //Printing - to which document result belongs
-          System.out.println("Path " + " : " + title);
-           
-          //Get stored text from found document
-          String text = doc.get("contents");
-          
-          
-          
-          TokenStream tokenStream = TokenSources.getAnyTokenStream(searcher.getIndexReader(), hits.scoreDocs[i].doc, "contents", analyzer);
-          TextFragment[] frag = highlighter.getBestTextFragments(tokenStream, text, false, 10);
-          for (int j = 0; j < frag.length; j++) {
-            if ((frag[j] != null) && (frag[j].getScore() > 0)) {
-              System.out.println((frag[j].toString()));
-            }
-          }
-          
-        
-          //Create token stream
-          TokenStream stream = TokenSources.getAnyTokenStream(reader, docid, "contents", analyzer);
-           
-          //Get highlighted text fragments
-          String[] frags = highlighter.getBestFragments(stream, text, 20);
-          for (String f : frags)
-          {
-              System.out.println("=======================");
-              System.out.println(f);
-          }
-      }
-
+      if(!line.contains("#"))
+          SearchFiles.highlightResults(reader, searcher, query, hits, analyzer);
+            
       if (queryString != null) {
         break;
       }
     }
+    analyzer.close();
     reader.close();
   }
   
@@ -306,6 +251,10 @@ public class SearchFiles {
   
   public static BasicStats getBasicStats(IndexReader indexReader, Term myTerm, float queryBoost) throws IOException {
 	    String fieldName = myTerm.field();
+	    
+	    System.out.println("myTerm:" + myTerm.toString());
+	    
+	    
 
 	    CollectionStatistics collectionStats = new CollectionStatistics(
 	            "field",
@@ -354,9 +303,56 @@ public class SearchFiles {
 	    System.out.println("myStats.getAvgFieldLength():" + myStats.getAvgFieldLength());
 	    System.out.println("myStats.numberOfFieldTokens():" + myStats.getNumberOfFieldTokens());
 	    System.out.println("myStats.NumberOfDocuments():" + myStats.getNumberOfDocuments());
-	    System.out.println("myStats.dofreq():" + myStats.getDocFreq());
+	    System.out.println("myStats.docfreq():" + myStats.getDocFreq());
 	    System.out.println("myStats.setTotalTermFreq():" + myStats.getTotalTermFreq());
 
 	    return myStats;
 	}
+  
+  public static void highlightResults(IndexReader reader,IndexSearcher searcher, Query query, TopDocs hits, Analyzer analyzer) throws IOException, InvalidTokenOffsetsException{
+      
+      //Uses HTML &lt;B&gt;&lt;/B&gt; tag to highlight the searched terms
+      Formatter formatter = new SimpleHTMLFormatter();
+       
+      //It scores text fragments by the number of unique query terms found
+      //Basically the matching score in layman terms
+      QueryScorer scorer = new QueryScorer(query);
+       
+      //used to markup highlighted terms found in the best sections of a text
+      Highlighter highlighter = new Highlighter(formatter, scorer);
+       
+      //It breaks text up into same-size texts but does not split up spans
+      Fragmenter fragmenter = new SimpleSpanFragmenter(scorer, 50);
+       
+      //breaks text up into same-size fragments with no concerns over spotting sentence boundaries.
+      //Fragmenter fragmenter = new SimpleFragmenter(10);
+       
+      //set fragmenter to highlighter
+      highlighter.setTextFragmenter(fragmenter);
+       
+      //Iterate over found results
+      for (int i = 0; i < hits.scoreDocs.length; i++)
+      {
+          int docid = hits.scoreDocs[i].doc;
+          Document doc = searcher.doc(docid);
+          String title = doc.get("path");
+           
+          //Printing - to which document result belongs
+          System.out.println("Path " + " : " + title);
+           
+          //Get stored text from found document
+          String text = doc.get("contents");
+          
+          //Create token stream
+          TokenStream stream = TokenSources.getAnyTokenStream(reader, docid, "contents", analyzer);
+           
+          //Get highlighted text fragments
+          String[] frags = highlighter.getBestFragments(stream, text, 20);
+          for (String f : frags)
+          {
+              System.out.println("=======================");
+              System.out.println(f);
+          }
+      }
+  }
 }

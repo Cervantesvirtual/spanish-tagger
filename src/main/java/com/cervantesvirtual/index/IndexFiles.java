@@ -24,7 +24,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
-import com.cervantesvirtual.analyzer.ContentAnalyzer;
+import com.cervantesvirtual.analyzer.SynonymIndexAnalyzer;
 
 /** Index all text files under a directory.
  * <p>
@@ -37,10 +37,10 @@ public class IndexFiles {
 
   /** Index all text files under a directory. */
   public static void main(String[] args) {
-    String usage = "java org.apache.lucene.demo.IndexFiles"
+    /*String usage = "java org.apache.lucene.demo.IndexFiles"
                  + " [-index INDEX_PATH] [-docs DOCS_PATH] [-update]\n\n"
                  + "This indexes the documents in DOCS_PATH, creating a Lucene index"
-                 + "in INDEX_PATH that can be searched with SearchFiles";
+                 + "in INDEX_PATH that can be searched with SearchFiles";*/
     String indexPath = "index";
     String docsPath = "src/main/resources/txtfiles";
     boolean create = true;
@@ -72,7 +72,7 @@ public class IndexFiles {
       System.out.println("Indexing to directory '" + indexPath + "'...");
 
       Directory dir = FSDirectory.open(Paths.get(indexPath));
-      Analyzer analyzer = new ContentAnalyzer();
+      Analyzer analyzer = new SynonymIndexAnalyzer();
       
       IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
@@ -175,8 +175,6 @@ public class IndexFiles {
       // If that's not the case searching for special characters will fail.
       //doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))));
       doc.add(new TextField("contents", new String(Files.readAllBytes(file)), Store.YES));
-      
-      //Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS
       
       if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
         // New index, so we just add the document (no old document can be there):

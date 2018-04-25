@@ -21,7 +21,7 @@ import org.apache.lucene.analysis.synonym.SynonymMap;
 /**
  * The Class ContentAnalyzer.
  */
-public class ContentAnalyzer extends Analyzer {
+public class SynonymIndexAnalyzer extends Analyzer {
 	
 	private String synonymsFile = "src/main/resources/synonyms.txt";
 
@@ -30,7 +30,6 @@ public class ContentAnalyzer extends Analyzer {
 
 		final StandardTokenizer src = new StandardTokenizer();
 		src.setMaxTokenLength(StandardAnalyzer.DEFAULT_MAX_TOKEN_LENGTH);
-		//TokenStream tok = new StandardFilter(src);
 		TokenStream tok = new LowerCaseFilter(src);
 		tok = new ASCIIFoldingFilterBVMC(tok);
 		
@@ -42,7 +41,7 @@ public class ContentAnalyzer extends Analyzer {
 			
 			final SynonymMap map = parser.build();
 			tok = new SynonymGraphFilter(tok,map,true);
-			//tok = new FlattenGraphFilter(tok);
+			tok = new FlattenGraphFilter(tok); 
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -52,8 +51,7 @@ public class ContentAnalyzer extends Analyzer {
 			e.printStackTrace();
 		}
         
-        
-		return new TokenStreamComponents(src, tok) {
+        return new TokenStreamComponents(src, tok) {
 			@Override
 			protected void setReader(final Reader reader) {
 				src.setMaxTokenLength(StandardAnalyzer.DEFAULT_MAX_TOKEN_LENGTH);
